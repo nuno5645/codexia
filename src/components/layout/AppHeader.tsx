@@ -6,6 +6,7 @@ import { useLayoutStore } from "@/stores/layoutStore";
 import { invoke } from "@tauri-apps/api/core";
 import { useState, useEffect } from "react";
 import { McpDialog } from "../dialogs/McpDialog";
+import { AuthDialog } from "../dialogs/AuthDialog";
 
 export function AppHeader() {
   const { showFileTree, toggleFileTree } = useLayoutStore();
@@ -74,6 +75,8 @@ export function AppHeader() {
           <Settings className="w-4 h-4" />
           Settings
         </Link>
+
+        <AuthDialog />
       </span>
     </div>
   );

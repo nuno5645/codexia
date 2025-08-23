@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "@/utils/tauriMock";
 import {
   Card,
   CardContent,
@@ -32,7 +32,7 @@ export default function ProjectsPage() {
 
   const loadProjects = async () => {
     try {
-      const projectList = await invoke<Project[]>("read_codex_config");
+      const projectList = await safeInvoke('read_codex_config');
       setProjects(projectList);
     } catch (error) {
       console.error("Failed to load projects:", error);

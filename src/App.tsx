@@ -7,10 +7,15 @@ import DxtPage from "./pages/dxt";
 import SettingsPage from "./pages/settings";
 import UsagePage from "./pages/usage";
 import { useLayoutStore } from "./stores/layoutStore";
+import { useAuthInitialization } from "./hooks/useAuthInitialization";
+import { DevelopmentNotice } from "./components/common/DevelopmentNotice";
 import "./App.css";
 
 export default function App() {
   const { lastRoute } = useLayoutStore();
+  
+  // Initialize authentication on app startup
+  useAuthInitialization();
 
   const router = createHashRouter([
     {
@@ -47,5 +52,10 @@ export default function App() {
     }
   }, []);
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <DevelopmentNotice />
+      <RouterProvider router={router} />
+    </>
+  );
 }

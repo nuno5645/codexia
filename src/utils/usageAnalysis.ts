@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from './tauriMock';
 
 export interface TokenUsage {
   input_tokens: number;
@@ -68,7 +69,7 @@ function calculateTokenCost(usage: TokenUsage, model: string): number {
 
 export async function getSessionFiles(): Promise<string[]> {
   try {
-    return await invoke('get_session_files');
+    return await safeInvoke('get_session_files');
   } catch (error) {
     console.error('Failed to get session files:', error);
     return [];

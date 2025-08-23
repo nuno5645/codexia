@@ -4,14 +4,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Provider, useSettingsStore } from "@/stores/SettingsStore";
+import { useAuthStore, useIsAuthenticated } from "@/stores/AuthStore";
+import { AuthDialog } from "@/components/dialogs/AuthDialog";
+import { Badge } from "@/components/ui/badge";
+import { User, AlertCircle, Check } from "lucide-react";
 
 export default function SettingsPage() {
   const {
     providers,
-    setProviderApiKey,
     setProviderBaseUrl,
     setProviderModels,
   } = useSettingsStore();
+  const isAuthenticated = useIsAuthenticated();
+  const authState = useAuthStore((state) => state.auth);
   const [activeSection, setActiveSection] = useState("provider");
   const [selectedProvider, setSelectedProvider] = useState<string>("openai");
   const [newModelName, setNewModelName] = useState("");
@@ -75,18 +80,50 @@ export default function SettingsPage() {
             <Card className="col-span-2">
               <CardContent className="p-4">
                 <h2 className="text-lg font-semibold mb-4">
-                  {selectedProvider} Models
+                  {selectedProvider} Configuration
                 </h2>
-                <div className="mb-4">
-                  <label className="block mb-1 font-medium">API Key</label>
-                  <Input
-                    type="password"
-                    value={providers[selectedProvider as Provider]?.apiKey || ""}
-                    onChange={(e) =>
-                      setProviderApiKey(selectedProvider as Provider, e.target.value)
-                    }
-                    placeholder={`Enter API key for ${selectedProvider}`}
-                  />
+                
+                {/* Authentication Status */}
+                <div className="mb-6">
+                  <label className="block mb-2 font-medium">Authentication</label>
+                  <Card className="p-4">
+                    {!isAuthenticated ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <AlertCircle className="w-4 h-4" />
+                          <span>Not authenticated</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Sign in to access AI models and sync your conversations.
+                        </p>
+                        <AuthDialog />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {authState.type === 'api_key' ? (
+                            <>
+                              <Check className="w-4 h-4 text-green-600" />
+                              <span>API Key</span>
+                              <Badge variant="outline">Active</Badge>
+                            </>
+                          ) : (
+                            <>
+                              <User className="w-4 h-4 text-green-600" />
+                              <span>ChatGPT</span>
+                              {authState.email && (
+                                <Badge variant="outline">{authState.email}</Badge>
+                              )}
+                              {authState.plan && (
+                                <Badge variant="secondary">{authState.plan}</Badge>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <AuthDialog />
+                      </div>
+                    )}
+                  </Card>
                 </div>
                 <div className="mb-4">
                   <label className="block mb-1 font-medium">Base URL</label>

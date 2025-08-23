@@ -1,3 +1,4 @@
+mod auth;
 mod codex_client;
 mod commands;
 mod config;
@@ -11,6 +12,8 @@ use commands::{
     approve_execution, check_codex_version, close_session, delete_session_file,
     get_latest_session_id, get_running_sessions, get_session_files, read_session_file, read_history_file,
     load_sessions_from_disk, pause_session, send_message, send_message_with_media, start_codex_session, stop_session,
+    // Authentication commands
+    get_auth_status, start_login_flow, login_with_api_key_command, logout_command, get_auth_token,
 };
 use config::{
     add_mcp_server, add_or_update_model_provider, add_or_update_profile, delete_mcp_server,
@@ -88,6 +91,12 @@ pub fn run() {
             add_or_update_profile,
             delete_profile,
             add_or_update_model_provider,
+            // Authentication commands
+            get_auth_status,
+            start_login_flow,
+            login_with_api_key_command,
+            logout_command,
+            get_auth_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,7 +1,7 @@
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '@/utils/tauriMock';
 import { CodexConfig } from '@/types/codex';
 import { useFolderStore } from '@/stores/FolderStore';
-import { useSettingsStore } from '@/stores/SettingsStore';
+import { tokenManager } from './tokenManager';
 
 class SessionManager {
   private sessionConfigs: Map<string, CodexConfig> = new Map();
@@ -34,15 +34,13 @@ class SessionManager {
       
       console.log(`📁 currentFolder: ${currentFolder})`);
 
-      // Get API key from settings store
-      const settingsStore = useSettingsStore.getState();
-      const providerConfig = settingsStore.providers[config.provider as keyof typeof settingsStore.providers];
-      const apiKey = providerConfig?.apiKey || null;
+      // Get authentication token (OAuth or API key)
+      const authToken = await tokenManager.getValidToken();
       
-      console.log(`🔑 API key debug - Provider: ${config.provider}, Has API key: ${!!apiKey}, Length: ${apiKey?.length || 0}`);
+      console.log(`🔑 Auth token debug - Provider: ${config.provider}, Has token: ${!!authToken}, Length: ${authToken?.length || 0}`);
 
       // Start the session (backend will check if already exists)
-      await invoke('start_codex_session', {
+      await safeInvoke('start_codex_session', {
         sessionId: rawSessionId,
         config: {
           working_directory: currentFolder,
@@ -52,7 +50,7 @@ class SessionManager {
           custom_args: config.customArgs || null,
           approval_policy: config.approvalPolicy,
           sandbox_mode: config.sandboxMode,
-          api_key: apiKey,
+          api_key: authToken, // This will be either OAuth token or API key
         },
       });
 
@@ -75,7 +73,7 @@ class SessionManager {
     console.log(`🔧 Stopping backend session: ${rawSessionId} (from frontend: ${sessionId})`);
     
     try {
-      await invoke('stop_session', { sessionId: rawSessionId });
+      await safeInvoke('stop_session', { sessionId: rawSessionId });
     } catch (error) {
       console.error('Failed to stop session:', error);
       // Continue to clean up local state even if backend call fails
@@ -96,7 +94,7 @@ class SessionManager {
         : sessionId;
       
       // Use the new close_session command which properly shuts down the protocol connection
-      await invoke('close_session', { sessionId: rawSessionId });
+      await safeInvoke('close_session', { sessionId: rawSessionId });
       this.sessionConfigs.delete(sessionId);
       this.runningSessions.delete(sessionId);
     } catch (error) {

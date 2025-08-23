@@ -1,6 +1,7 @@
 use crate::protocol::CodexConfig;
 use crate::services::{codex, session};
 use crate::state::CodexState;
+use crate::auth::{AuthMode, ServerOptions, run_login_server, login_with_api_key, logout, CLIENT_ID, load_auth};
 use tauri::{AppHandle, State};
 use std::fs;
 
@@ -154,4 +155,138 @@ pub async fn read_history_file() -> Result<String, String> {
     }
     
     fs::read_to_string(&history_path).map_err(|e| format!("Failed to read history file: {}", e))
+}
+
+// OAuth Authentication Commands
+
+#[tauri::command]
+pub async fn get_auth_status() -> Result<Option<String>, String> {
+    let codex_home = dirs::home_dir()
+        .ok_or("Could not find home directory")?
+        .join(".codex");
+
+    // 1) Check for environment variable first (matches CLI behavior)
+    if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
+        if !api_key.is_empty() {
+            return Ok(Some("api_key".to_string()));
+        }
+    }
+
+    // 2) Load auth via shared helper (reads ~/.codex/auth.json like the CLI)
+    match load_auth(&codex_home, false).await {
+        Ok(Some(auth)) => {
+            match auth.mode {
+                AuthMode::ApiKey => Ok(Some("api_key".to_string())),
+                AuthMode::ChatGPT => {
+                    // Read tokens directly from auth.json to avoid non-Send futures
+                    let auth_file = codex_home.join("auth.json");
+                    if auth_file.exists() {
+                        match std::fs::read_to_string(&auth_file) {
+                            Ok(content) => {
+                                match serde_json::from_str::<serde_json::Value>(&content) {
+                                    Ok(json) => {
+                                        if let Some(id_token) = json
+                                            .get("tokens")
+                                            .and_then(|t| t.get("id_token"))
+                                            .and_then(|v| v.as_str())
+                                        {
+                                            match crate::auth::token_data::parse_id_token(id_token) {
+                                                Ok(info) => {
+                                                    let email = info
+                                                        .email
+                                                        .as_deref()
+                                                        .unwrap_or("chatgpt")
+                                                        .to_string();
+                                                    let plan = info
+                                                        .get_chatgpt_plan_type()
+                                                        .unwrap_or_else(|| "unknown".to_string());
+                                                    Ok(Some(format!("chatgpt:{}:{}", email, plan)))
+                                                }
+                                                Err(_) => Ok(Some("chatgpt:invalid".to_string())),
+                                            }
+                                        } else {
+                                            Ok(Some("chatgpt:invalid".to_string()))
+                                        }
+                                    }
+                                    Err(_) => Ok(Some("chatgpt:invalid".to_string())),
+                                }
+                            }
+                            Err(_) => Ok(Some("chatgpt:invalid".to_string())),
+                        }
+                    } else {
+                        Ok(Some("chatgpt:invalid".to_string()))
+                    }
+                }
+            }
+        }
+        Ok(None) => Ok(None),
+        Err(e) => Err(format!("Failed to read auth status: {}", e)),
+    }
+}
+
+#[tauri::command]
+pub async fn start_login_flow() -> Result<String, String> {
+    let codex_home = dirs::home_dir()
+        .ok_or("Could not find home directory")?
+        .join(".codex");
+    
+    let opts = ServerOptions::new(codex_home, CLIENT_ID.to_string());
+    
+    match run_login_server(opts, None) {
+        Ok(server) => {
+            let auth_url = server.auth_url.clone();
+            
+            // Spawn a task to handle the server completion
+            tokio::spawn(async move {
+                if let Err(e) = server.block_until_done() {
+                    log::error!("Login server error: {}", e);
+                }
+            });
+            
+            Ok(auth_url)
+        }
+        Err(e) => Err(format!("Failed to start login server: {}", e)),
+    }
+}
+
+#[tauri::command]
+pub async fn login_with_api_key_command(api_key: String) -> Result<(), String> {
+    let codex_home = dirs::home_dir()
+        .ok_or("Could not find home directory")?
+        .join(".codex");
+    
+    login_with_api_key(&codex_home, &api_key)
+        .map_err(|e| format!("Failed to save API key: {}", e))
+}
+
+#[tauri::command]
+pub async fn logout_command() -> Result<bool, String> {
+    let codex_home = dirs::home_dir()
+        .ok_or("Could not find home directory")?
+        .join(".codex");
+    
+    logout(&codex_home)
+        .map_err(|e| format!("Failed to logout: {}", e))
+}
+
+#[tauri::command]
+pub async fn get_auth_token() -> Result<Option<String>, String> {
+    // 1) Environment variable takes precedence
+    if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
+        if !api_key.is_empty() {
+            return Ok(Some(api_key));
+        }
+    }
+
+    // 2) If an API key is stored in auth.json (CLI-compatible), return it
+    let codex_home = dirs::home_dir()
+        .ok_or("Could not find home directory")?
+        .join(".codex");
+    match load_auth(&codex_home, false).await {
+        Ok(Some(auth)) => match auth.mode {
+            AuthMode::ApiKey => Ok(auth.get_api_key()),
+            AuthMode::ChatGPT => Ok(None),
+        },
+        _ => Ok(None),
+    }
 }

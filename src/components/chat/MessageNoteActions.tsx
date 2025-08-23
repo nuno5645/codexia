@@ -68,22 +68,22 @@ export const MessageNoteActions: React.FC<MessageNoteActionsProps> = ({
   return (
     <TooltipProvider>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
-          >
-            <Tooltip>
-              <TooltipTrigger>
+        <Tooltip>
+          <PopoverTrigger asChild>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
+              >
                 <FileText className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Add to notepad</p>
-              </TooltipContent>
-            </Tooltip>
-          </Button>
-        </PopoverTrigger>
+              </Button>
+            </TooltipTrigger>
+          </PopoverTrigger>
+          <TooltipContent>
+            <p>Add to notepad</p>
+          </TooltipContent>
+        </Tooltip>
         
         <PopoverContent className="w-64 p-2" align="end">
           <div className="space-y-2">

@@ -38,3 +38,15 @@ tauri-plugin-fs = "2"
 walkdir = "2.3"
 chrono = { version = "0.4", features = ["serde"] }
 tauri-plugin-log = "2"
+
+# OAuth Authentication dependencies
+base64 = "0.22"
+rand = "0.8"
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+sha2 = "0.10"
+tiny_http = "0.12"
+url = "2"
+urlencoding = "2.1"
+webbrowser = "1.0"
+thiserror = "2.0"
+tempfile = "3"
