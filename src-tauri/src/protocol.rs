@@ -96,6 +96,25 @@ pub enum EventMsg {
     AgentMessageDelta {
         delta: String,
     },
+    // Newer CLI event types for reasoning stream and metrics
+    #[serde(rename = "agent_reasoning_delta")]
+    AgentReasoningDelta {
+        delta: String,
+    },
+    #[serde(rename = "agent_reasoning")]
+    AgentReasoning {
+        text: String,
+    },
+    #[serde(rename = "agent_reasoning_section_break")]
+    AgentReasoningSectionBreak,
+    #[serde(rename = "token_count")]
+    TokenCount {
+        input_tokens: u32,
+        cached_input_tokens: u32,
+        output_tokens: u32,
+        reasoning_output_tokens: u32,
+        total_tokens: u32,
+    },
     ExecApprovalRequest {
         command: String,
         cwd: String,

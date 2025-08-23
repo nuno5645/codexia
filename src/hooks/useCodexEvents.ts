@@ -96,6 +96,15 @@ export const useCodexEvents = ({
           currentStreamingMessageId.current = null;
         }
         break;
+      
+      case 'turn_complete':
+        // Treat turn_complete as end of streaming as well
+        setSessionLoading(sessionId, false);
+        if (currentStreamingMessageId.current) {
+          streamController.current.finalize(true);
+          currentStreamingMessageId.current = null;
+        }
+        break;
         
       case 'agent_message':
         // Handle complete message (fallback for non-streaming)
@@ -135,6 +144,56 @@ export const useCodexEvents = ({
         if (currentStreamingMessageId.current && msg.delta) {
           streamController.current.pushAndMaybeCommit(msg.delta);
         }
+        break;
+
+      case 'agent_reasoning_delta':
+        // Treat reasoning stream similarly to message stream for now
+        if (!currentStreamingMessageId.current) {
+          const messageId = `${sessionId}-stream-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+          currentStreamingMessageId.current = messageId;
+          const streamingMessage: ChatMessage = {
+            id: messageId,
+            type: 'agent',
+            content: '',
+            timestamp: new Date(),
+            isStreaming: true,
+          };
+          addMessageToStore(streamingMessage);
+          const sink = createStreamSink(messageId);
+          streamController.current.begin(sink);
+        }
+        if (currentStreamingMessageId.current && msg.delta) {
+          streamController.current.pushAndMaybeCommit(msg.delta);
+        }
+        break;
+
+      case 'agent_reasoning':
+        // If not streaming, add as a full message; otherwise append and finalize
+        if (!currentStreamingMessageId.current) {
+          const agentMessage: ChatMessage = {
+            id: `${sessionId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            type: 'agent',
+            content: msg.text,
+            timestamp: new Date(),
+          };
+          addMessageToStore(agentMessage);
+        } else {
+          streamController.current.pushAndMaybeCommit(`\n${msg.text}`);
+          streamController.current.finalize(true);
+          currentStreamingMessageId.current = null;
+        }
+        setSessionLoading(sessionId, false);
+        break;
+
+      case 'agent_reasoning_section_break':
+        if (currentStreamingMessageId.current) {
+          streamController.current.pushAndMaybeCommit("\n\n");
+        }
+        break;
+
+      case 'token_count':
+        // Optional: we could surface token counts in the UI later
+        console.log('Token usage:', msg);
         break;
         
       case 'exec_approval_request':
