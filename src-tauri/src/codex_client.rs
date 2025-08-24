@@ -3,6 +3,7 @@ use serde_json;
 use std::process::Stdio;
 use std::collections::HashMap;
 use tauri::{AppHandle, Emitter};
+use tokio::fs::OpenOptions;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
@@ -241,18 +242,68 @@ impl CodexClient {
             log::debug!("Stdin writer task terminated");
         });
 
+        // Prepare debug event log file (JSONL) under ~/.codex/debug/
+        let debug_log_path = match dirs::home_dir() {
+            Some(home) => {
+                let dir = home.join(".codex").join("debug");
+                if let Err(e) = std::fs::create_dir_all(&dir) {
+                    log::warn!("Failed to create debug log dir {}: {}", dir.display(), e);
+                }
+                let ts = chrono::Utc::now().format("%Y%m%d-%H%M%S");
+                dir.join(format!("events-{}-{}.jsonl", ts, &session_id))
+            }
+            None => std::path::PathBuf::from(format!("events-{}.jsonl", &session_id)),
+        };
+
         // Handle stdout reading
         let app_clone = app.clone();
         let session_id_clone = session_id.clone();
         tokio::spawn(async move {
             let reader = BufReader::new(stdout);
             let mut lines = reader.lines();
+            let mut seq: u64 = 0;
+
+            // Open debug log file in append mode
+            let mut log_file = match OpenOptions::new().create(true).append(true).open(&debug_log_path).await {
+                Ok(f) => Some(f),
+                Err(e) => {
+                    log::warn!("Could not open debug event log {}: {}", debug_log_path.display(), e);
+                    None
+                }
+            };
 
             log::debug!("Starting stdout reader for session: {}", session_id_clone);
 
             while let Ok(Some(line)) = lines.next_line().await {
                 // log::debug!("📥 Received line from codex: {}", line);
-                if let Ok(event) = serde_json::from_str::<Event>(&line) {
+                let parsed = serde_json::from_str::<Event>(&line);
+
+                // Write debug record to file
+                if let Some(f) = log_file.as_mut() {
+                    let ts = chrono::Utc::now().to_rfc3339();
+                    let record = match &parsed {
+                        Ok(ev) => serde_json::json!({
+                            "ts": ts,
+                            "seq": seq,
+                            "session_id": session_id_clone,
+                            "ok": true,
+                            "event": ev,
+                        }),
+                        Err(_e) => serde_json::json!({
+                            "ts": ts,
+                            "seq": seq,
+                            "session_id": session_id_clone,
+                            "ok": false,
+                            "raw": line,
+                        }),
+                    };
+                    let _ = f.write_all(serde_json::to_string(&record).unwrap_or_default().as_bytes()).await;
+                    let _ = f.write_all(b"\n").await;
+                }
+
+                seq = seq.saturating_add(1);
+
+                if let Ok(event) = parsed {
                     // log::debug!("📨 Parsed event: {:?}", event);
 
                     // Log the event for debugging

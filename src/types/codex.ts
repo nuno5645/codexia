@@ -12,8 +12,18 @@ export type EventMsg =
   // Newer CLI event types for raw reasoning and metrics
   | { type: 'agent_reasoning_delta'; delta: string }
   | { type: 'agent_reasoning'; text: string }
+  | { type: 'agent_reasoning_raw_content_delta'; delta: string }
+  | { type: 'agent_reasoning_raw_content'; text: string }
   | { type: 'agent_reasoning_section_break' }
   | { type: 'token_count'; input_tokens: number; cached_input_tokens: number; output_tokens: number; reasoning_output_tokens: number; total_tokens: number }
+  | { type: 'token_count_update'; input_tokens?: number; cached_input_tokens?: number; output_tokens?: number; reasoning_output_tokens?: number; total_tokens?: number }
+  | { type: 'turn_started' }
+  | { type: 'turn_aborted' }
+  | { type: 'plan_update'; plan: { step: string; status: string }[] }
+  | { type: 'turn_diff'; unified_diff: string }
+  | { type: 'patch_apply_begin' }
+  | { type: 'patch_apply_end'; success: boolean }
+  | { type: 'apply_patch_approval_request'; patch: string; files: string[] }
   | { type: 'exec_approval_request'; command: string; cwd: string }
   | { type: 'patch_approval_request'; patch: string; files: string[] }
   | { type: 'error'; message: string }

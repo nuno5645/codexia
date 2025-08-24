@@ -2,13 +2,14 @@ import { memo } from 'react';
 import { Copy, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { MessageNoteActions } from './MessageNoteActions';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { StreamingMessage } from '../StreamingMessage';
 import { useState } from 'react';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ExecBlock } from './ExecBlock';
+import { DiffBlock } from './DiffBlock';
 
 interface NormalizedMessage {
   id: string;
@@ -57,6 +58,8 @@ export const Message = memo<MessageProps>(({
   const [isCollapsed, setIsCollapsed] = useState(true);
   
   const isEnvironmentContext = normalized.content.startsWith('<environment_context>');
+  const isExecLike = normalized.role === 'system' && /(^cwd: |\n\$ |^\$ )/.test(normalized.content);
+  const isDiffBlock = /^```diff[\s\S]*```$/m.test(normalized.content.trim()) || normalized.content.startsWith('diff --git ');
   
   const getWorkingDirectory = () => {
     if (!isEnvironmentContext) return '';
@@ -107,21 +110,13 @@ export const Message = memo<MessageProps>(({
                     <MarkdownRenderer content={normalized.content} />
                   </CollapsibleContent>
                 </Collapsible>
+              ) : isExecLike ? (
+                <ExecBlock content={normalized.content} />
+              ) : isDiffBlock ? (
+                <DiffBlock content={normalized.content} />
               ) : (
                 <>
-                  {normalized.isStreaming ? (
-                    <StreamingMessage 
-                      message={{
-                        id: normalized.id,
-                        role: normalized.role as "user" | "assistant" | "system",
-                        content: normalized.content,
-                        timestamp: normalized.timestamp,
-                        isStreaming: normalized.isStreaming
-                      }}
-                    />
-                  ) : (
-                    <MarkdownRenderer content={normalized.content} />
-                  )}
+                  <MarkdownRenderer content={normalized.content} />
                 </>
               )}
             </div>

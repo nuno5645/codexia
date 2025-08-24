@@ -1,10 +1,11 @@
 import { useRef, useEffect, useMemo, useCallback, useState } from 'react';
-import { Bot, ChevronUp, ChevronDown } from 'lucide-react';
+import { Bot, ChevronUp, ChevronDown, Brain, Wrench, Hammer } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '@/types/chat';
 import type { ChatMessage as CodexMessageType } from '@/types/codex';
 import { TextSelectionMenu } from './TextSelectionMenu';
 import { Message } from './Message';
 import { useTextSelection } from '../../hooks/useTextSelection';
+import { useUiStore } from '@/stores/UiStore';
 
 // Unified message type
 type UnifiedMessage = ChatMessageType | CodexMessageType;
@@ -21,6 +22,11 @@ export function MessageList({ messages, className = "", isLoading = false, isPen
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollButtons, setShowScrollButtons] = useState(false);
   const { selectedText } = useTextSelection();
+  const showReasoning = useUiStore((s) => s.showReasoning);
+  const toggleReasoning = useUiStore((s) => s.toggleReasoning);
+  const activeExecs = useUiStore((s) => s.activeExecs);
+  const activePatches = useUiStore((s) => s.activePatches);
+  const tokenUsage = useUiStore((s) => s.tokenUsage);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -117,6 +123,32 @@ export function MessageList({ messages, className = "", isLoading = false, isPen
 
   return (
     <div className={`flex flex-col flex-1 min-h-0 min-w-0 relative ${className}`}>
+      {/* Status / Controls bar */}
+      <div className="px-2 py-1 flex items-center gap-2 text-xs text-slate-600">
+        <button
+          onClick={toggleReasoning}
+          className={`border rounded px-2 py-0.5 ${showReasoning ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200'}`}
+          title="Toggle reasoning visibility"
+        >
+          <Brain className="w-3 h-3 inline mr-1" /> {showReasoning ? 'Reasoning: On' : 'Reasoning: Off'}
+        </button>
+        <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
+          <Wrench className="w-3 h-3" /> Exec: {activeExecs}
+        </span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
+          <Hammer className="w-3 h-3" /> Patch: {activePatches}
+        </span>
+        {tokenUsage && (
+          <span className="ml-auto inline-flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">in: {tokenUsage.input_tokens ?? 0}</span>
+            <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">out: {tokenUsage.output_tokens ?? 0}</span>
+            {typeof tokenUsage.reasoning_output_tokens === 'number' && (
+              <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">r: {tokenUsage.reasoning_output_tokens}</span>
+            )}
+            <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">total: {tokenUsage.total_tokens ?? 0}</span>
+          </span>
+        )}
+      </div>
       {/* Single Text Selection Menu for all messages */}
       <TextSelectionMenu />
       {/* Messages */}

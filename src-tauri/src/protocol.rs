@@ -105,6 +105,14 @@ pub enum EventMsg {
     AgentReasoning {
         text: String,
     },
+    #[serde(rename = "agent_reasoning_raw_content_delta")]
+    AgentReasoningRawContentDelta {
+        delta: String,
+    },
+    #[serde(rename = "agent_reasoning_raw_content")]
+    AgentReasoningRawContent {
+        text: String,
+    },
     #[serde(rename = "agent_reasoning_section_break")]
     AgentReasoningSectionBreak,
     #[serde(rename = "token_count")]
@@ -114,6 +122,37 @@ pub enum EventMsg {
         output_tokens: u32,
         reasoning_output_tokens: u32,
         total_tokens: u32,
+    },
+    #[serde(rename = "token_count_update")]
+    TokenCountUpdate {
+        #[serde(default)]
+        input_tokens: Option<u32>,
+        #[serde(default)]
+        cached_input_tokens: Option<u32>,
+        #[serde(default)]
+        output_tokens: Option<u32>,
+        #[serde(default)]
+        reasoning_output_tokens: Option<u32>,
+        #[serde(default)]
+        total_tokens: Option<u32>,
+    },
+    #[serde(rename = "turn_started")]
+    TurnStarted,
+    #[serde(rename = "turn_aborted")]
+    TurnAborted,
+    #[serde(rename = "plan_update")]
+    PlanUpdate {
+        plan: Vec<PlanItem>,
+    },
+    #[serde(rename = "turn_diff")]
+    TurnDiff {
+        unified_diff: String,
+    },
+    #[serde(rename = "patch_apply_begin")]
+    PatchApplyBegin,
+    #[serde(rename = "patch_apply_end")]
+    PatchApplyEnd {
+        success: bool,
     },
     ExecApprovalRequest {
         command: String,
@@ -149,6 +188,12 @@ pub enum EventMsg {
     BackgroundEvent {
         message: String,
     },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanItem {
+    pub step: String,
+    pub status: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
