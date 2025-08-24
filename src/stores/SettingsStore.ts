@@ -52,7 +52,7 @@ const DEFAULT_PROVIDERS: Providers = {
   gemini: {
     apiKey: "",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-    models: ["gemini-2.5-flash", "gemini-2.5-pro"],
+    models: ["gemini-2.5-pro"],
   },
   openrouter: {
     apiKey: "",

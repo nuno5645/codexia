@@ -24,7 +24,7 @@ interface UiState {
 }
 
 export const useUiStore = create<UiState>((set) => ({
-  showReasoning: false,
+  showReasoning: true,
   activeExecs: 0,
   activePatches: 0,
   tokenUsage: undefined,
@@ -36,4 +36,3 @@ export const useUiStore = create<UiState>((set) => ({
   decPatch: () => set((s) => ({ activePatches: Math.max(0, s.activePatches - 1) })),
   setTokenUsage: (u: TokenUsage) => set({ tokenUsage: u }),
 }));
-

@@ -36,6 +36,8 @@ export const useCodexEvents = ({
   const reasoningFlush = useRef(new Map<string, number>());
   // Track live exec output streams by call_id
   const execStreams = useRef(new Map<string, { messageId: string; buffer: string }>());
+  // Track diffs shown within the current turn to avoid duplicates
+  const shownDiffs = useRef<Set<string>>(new Set());
 
   const addMessageToStore = (message: ChatMessage) => {
     // Ensure conversation exists
@@ -57,6 +59,32 @@ export const useCodexEvents = ({
   };
 
   // Stream sink is no longer used; we stream by direct appends for immediate UX
+  const scheduleFlush = useCallback((which: 'agent' | 'reasoning', id: string) => {
+    const map = which === 'agent' ? agentStreams.current : reasoningStreams.current;
+    const flags = which === 'agent' ? agentFlush.current : reasoningFlush.current;
+    if (flags.has(id)) return;
+    const raf = (cb: FrameRequestCallback) =>
+      (typeof window !== 'undefined' && 'requestAnimationFrame' in window)
+        ? window.requestAnimationFrame(cb)
+        : (setTimeout(() => cb(Date.now()), 16) as unknown as number);
+    const cancel = (h: number) =>
+      (typeof window !== 'undefined' && 'cancelAnimationFrame' in window)
+        ? window.cancelAnimationFrame(h)
+        : clearTimeout(h as unknown as NodeJS.Timeout);
+    const handle = raf(() => {
+      flags.delete(id);
+      const st = map.get(id);
+      if (st) {
+        updateMessage(sessionId, st.messageId, { content: st.buffer });
+      }
+    });
+    flags.set(id, handle);
+    return () => {
+      const h = flags.get(id);
+      if (h) cancel(h);
+      flags.delete(id);
+    };
+  }, [sessionId, updateMessage]);
 
   const handleCodexEvent = (event: CodexEvent) => {
     const { msg } = event;
@@ -70,6 +98,7 @@ export const useCodexEvents = ({
         streamController.current.clearAll();
         currentStreamingMessageId.current = null;
         currentStreamingBuffer.current = '';
+        shownDiffs.current.clear();
         setSessionLoading(sessionId, true);
         break;
         
@@ -97,6 +126,7 @@ export const useCodexEvents = ({
           streamController.current.finalize(true);
           currentStreamingMessageId.current = null;
         }
+        shownDiffs.current.clear();
         break;
       case 'turn_aborted': {
         const m: ChatMessage = {
@@ -110,6 +140,7 @@ export const useCodexEvents = ({
         streamController.current.clearAll();
         currentStreamingMessageId.current = null;
         currentStreamingBuffer.current = '';
+        shownDiffs.current.clear();
         break;
       }
         
@@ -163,7 +194,6 @@ export const useCodexEvents = ({
 
       case 'agent_reasoning_delta':
       case 'agent_reasoning_raw_content_delta': {
-        if (!showReasoning) break;
         const id = event.id;
         const delta = ((msg as any).delta || '').toString();
         let st = reasoningStreams.current.get(id);
@@ -189,7 +219,6 @@ export const useCodexEvents = ({
 
       case 'agent_reasoning':
       case 'agent_reasoning_raw_content': {
-        if (!showReasoning) break;
         const id = event.id;
         const text = ((msg as any).text || '').toString();
         const st = reasoningStreams.current.get(id);
@@ -241,7 +270,13 @@ export const useCodexEvents = ({
         break;
       }
       case 'turn_diff': {
-        const content = '```diff\n' + (msg.unified_diff || '') + '\n```';
+        const raw = (msg.unified_diff || '').toString();
+        if (!raw) break;
+        if (shownDiffs.current.has(raw)) {
+          break; // skip identical diff already shown in this turn
+        }
+        shownDiffs.current.add(raw);
+        const content = '```diff\n' + raw + '\n```';
         const m: ChatMessage = {
           id: `${sessionId}-diff-${Date.now()}`,
           type: 'system',
@@ -417,29 +452,3 @@ export const useCodexEvents = ({
 
   return {};
 };
-  const scheduleFlush = (which: 'agent' | 'reasoning', id: string) => {
-    const map = which === 'agent' ? agentStreams.current : reasoningStreams.current;
-    const flags = which === 'agent' ? agentFlush.current : reasoningFlush.current;
-    if (flags.has(id)) return;
-    const raf = (cb: FrameRequestCallback) =>
-      (typeof window !== 'undefined' && 'requestAnimationFrame' in window)
-        ? window.requestAnimationFrame(cb)
-        : (setTimeout(() => cb(Date.now()), 16) as unknown as number);
-    const cancel = (h: number) =>
-      (typeof window !== 'undefined' && 'cancelAnimationFrame' in window)
-        ? window.cancelAnimationFrame(h)
-        : clearTimeout(h as unknown as NodeJS.Timeout);
-    const handle = raf(() => {
-      flags.delete(id);
-      const st = map.get(id);
-      if (st) {
-        updateMessage(sessionId, st.messageId, { content: st.buffer });
-      }
-    });
-    flags.set(id, handle);
-    return () => {
-      const h = flags.get(id);
-      if (h) cancel(h);
-      flags.delete(id);
-    };
-  };

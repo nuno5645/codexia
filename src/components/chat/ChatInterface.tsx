@@ -151,7 +151,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   ...config,
                   model: currentModel,
                   provider: currentProvider,
-                  useOss: currentProvider.toLowerCase() !== "openai",
+                  useOss: currentProvider.toLowerCase() === "ollama",
                 };
                 await sessionManager.ensureSessionRunning(
                   sessionId,
@@ -264,7 +264,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           ...config,
           model: currentModel,
           provider: currentProvider,
-          useOss: currentProvider.toLowerCase() !== "openai",
+          useOss: currentProvider.toLowerCase() === "ollama",
         };
         await sessionManager.ensureSessionRunning(
           actualSessionId,

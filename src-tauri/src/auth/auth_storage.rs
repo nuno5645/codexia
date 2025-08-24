@@ -4,7 +4,6 @@ use std::fs::{File, OpenOptions, remove_file};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use crate::auth::token_data::{TokenData, AuthMode};
 use crate::auth::OPENAI_API_KEY_ENV_VAR;

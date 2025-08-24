@@ -30,7 +30,7 @@ export function AppHeader() {
   }, []);
 
   return (
-    <div data-tauri-drag-region className="flex justify-between px-2">
+    <div className="bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
       <span className="flex gap-2 items-center">
         <div
           className={`w-2 h-2 rounded-full ${isCodexAvailable ? "bg-green-500" : "bg-red-500"}`}
