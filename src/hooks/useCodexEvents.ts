@@ -1,8 +1,8 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { ChatMessage, CodexEvent, ApprovalRequest } from '@/types/codex';
 import { useConversationStore } from '../stores/ConversationStore';
-import { StreamController, StreamControllerSink } from '@/utils/streamController';
+import { StreamController } from '@/utils/streamController';
 
 interface UseCodexEventsProps {
   sessionId: string;
@@ -417,7 +417,7 @@ export const useCodexEvents = ({
       
         
       default:
-        console.log('Unhandled event type:', msg.type);
+        console.log('Unhandled event type:', (msg as any).type);
     }
   };
 

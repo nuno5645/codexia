@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import { safeInvoke, isTauriContext, showDevelopmentNotice } from "@/utils/tauriMock";
 import {
   Dialog,
@@ -45,7 +45,7 @@ export function AuthDialog() {
         console.log('💻 Running in browser development mode');
       }
       
-      const status = await safeInvoke('get_auth_status');
+      const status = await safeInvoke('get_auth_status') as string | null;
       console.log('✅ Auth status received:', status);
       
       if (!status) {
@@ -74,9 +74,9 @@ export function AuthDialog() {
     } catch (error) {
       console.error('❌ Failed to check auth status:', error);
       console.log('🔧 Error details:', {
-        name: error?.name,
-        message: error?.message,
-        stack: error?.stack
+        name: (error as Error)?.name,
+        message: (error as Error)?.message,
+        stack: (error as Error)?.stack
       });
       setError('Failed to check authentication status');
     }
@@ -99,7 +99,7 @@ export function AuthDialog() {
       // Poll for completion (in a real app, you'd use events)
       const pollForCompletion = setInterval(async () => {
         try {
-          const newStatus = await safeInvoke('get_auth_status');
+          const newStatus = await safeInvoke('get_auth_status') as string | null;
           if (newStatus && newStatus.startsWith('chatgpt:')) {
             console.log('✅ OAuth completion detected:', newStatus);
             clearInterval(pollForCompletion);
@@ -108,7 +108,7 @@ export function AuthDialog() {
             setIsOpen(false);
           }
         } catch (error) {
-          console.log('⏳ Polling error (continuing):', error?.message);
+          console.log('⏳ Polling error (continuing):', (error as Error)?.message);
           // Continue polling
         }
       }, 2000);
@@ -122,7 +122,7 @@ export function AuthDialog() {
       
     } catch (error) {
       console.error('❌ Failed to start login flow:', error);
-      setError(`Failed to start authentication flow: ${error?.message}`);
+      setError(`Failed to start authentication flow: ${(error as Error)?.message}`);
       setIsLoading(false);
     }
   };

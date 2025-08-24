@@ -69,7 +69,7 @@ function calculateTokenCost(usage: TokenUsage, model: string): number {
 
 export async function getSessionFiles(): Promise<string[]> {
   try {
-    return await safeInvoke('get_session_files');
+    return await safeInvoke('get_session_files') as string[];
   } catch (error) {
     console.error('Failed to get session files:', error);
     return [];

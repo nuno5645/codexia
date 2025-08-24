@@ -65,7 +65,7 @@ class TokenManager {
 
   async getValidToken(): Promise<string | null> {
     try {
-      const token = await safeInvoke('get_auth_token');
+      const token = await safeInvoke('get_auth_token') as string | null;
       return token;
     } catch (error) {
       console.error('Failed to get auth token:', error);

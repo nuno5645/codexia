@@ -32,7 +32,7 @@ export default function ProjectsPage() {
 
   const loadProjects = async () => {
     try {
-      const projectList = await safeInvoke('read_codex_config');
+      const projectList = await safeInvoke('read_codex_config') as Project[];
       setProjects(projectList);
     } catch (error) {
       console.error("Failed to load projects:", error);
