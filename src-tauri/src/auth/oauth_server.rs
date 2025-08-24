@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use std::time::Duration;
 
 use base64::{Engine, engine::general_purpose};
 use tiny_http::{Header, Request, Response, Server};
@@ -23,7 +22,6 @@ pub struct ServerOptions {
     pub issuer: String,
     pub port: u16,
     pub open_browser: bool,
-    pub login_timeout: Option<Duration>,
 }
 
 impl ServerOptions {
@@ -34,17 +32,13 @@ impl ServerOptions {
             issuer: DEFAULT_ISSUER.to_string(),
             port: DEFAULT_PORT,
             open_browser: true,
-            login_timeout: None,
         }
     }
 }
 
 pub struct LoginServer {
     pub auth_url: String,
-    pub actual_port: u16,
     pub server_handle: thread::JoinHandle<io::Result<()>>,
-    pub shutdown_flag: Arc<AtomicBool>,
-    pub server: Arc<Server>,
 }
 
 impl LoginServer {
@@ -53,27 +47,6 @@ impl LoginServer {
             .join()
             .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to join server thread"))?
     }
-
-    pub fn cancel(&self) {
-        shutdown(&self.shutdown_flag, &self.server);
-    }
-}
-
-#[derive(Clone)]
-pub struct ShutdownHandle {
-    shutdown_flag: Arc<AtomicBool>,
-    server: Arc<Server>,
-}
-
-impl ShutdownHandle {
-    pub fn cancel(&self) {
-        shutdown(&self.shutdown_flag, &self.server);
-    }
-}
-
-pub fn shutdown(shutdown_flag: &AtomicBool, server: &Server) {
-    shutdown_flag.store(true, Ordering::SeqCst);
-    server.unblock();
 }
 
 pub fn run_login_server(
@@ -153,10 +126,7 @@ pub fn run_login_server(
     
     Ok(LoginServer {
         auth_url: auth_url_string,
-        actual_port,
         server_handle,
-        shutdown_flag,
-        server,
     })
 }
 
